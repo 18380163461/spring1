@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:contex="http://www.springframework.org/schema/c"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:util="http://www.springframework.org/schema/util" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+    <context:component-scan
+            base-package="com.example.demo.entity,com.example.aop,com.example.jdbc"></context:component-scan>
+    <aop:aspectj-autoproxy></aop:aspectj-autoproxy>
+    <context:property-placeholder location="classpath:db.properties"></context:property-placeholder>
+    <tx:annotation-driven transaction-manager="transactionManager"></tx:annotation-driven>
+
+    <bean id="helloWord" class="com.example.demo.entity.HelloWord">
+        <property name="name" value="this is my name"></property>
+    </bean>
+
+    <bean id="car" class="com.example.demo.entity.Car">
+        <constructor-arg value="111" type="int"></constructor-arg>
+        <constructor-arg type="java.lang.String">
+            <value>shanghai</value>
+        </constructor-arg>
+    </bean>
+
+
+    <bean id="car2" class="com.example.demo.entity.Car" scope="singleton" p:name="pname" p:peice="123">
+    </bean>
+
+    <bean id="person" class="com.example.demo.entity.Person">
+        <property name="name" value="youpengda"></property>
+        <property name="age" value="18"></property>
+        <property name="car" ref="car"></property>
+    </bean>
+
+    <bean id="loggingAspect2" class="com.example.aop.LoggingAspect2"></bean>
+    <aop:config>
+        <aop:pointcut id="pointcut1" expression="execution(* com.example.aop.Calculator.*(int, int))"></aop:pointcut>
+        <aop:aspect ref="loggingAspect2" order="1">
+            <aop:before method="beforeMethod" pointcut-ref="pointcut1"></aop:before>
+            <aop:after method="afterMethod" pointcut-ref="pointcut1"></aop:after>
+        </aop:aspect>
+    </aop:config>
+
+    <!--数据库连接池-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="user" value="${jdbc.user}"></property>
+        <property name="password" value="${jdbc.password}"></property>
+        <property name="jdbcUrl" value="${jdbc.url}"></property>
+        <property name="driverClass" value="${jdbc.driverClass}"></property>
+        <property name="initialPoolSize" value="3"></property>
+        <property name="maxPoolSize" value="3"></property>
+    </bean>
+    <!--jdbc-->
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate" scope="prototype">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <bean id="userDao" class="com.example.jdbcxml.UserDaoImpl">
+          <property name="jdbcTemplate" ref="jdbcTemplate"></property>
+      </bean>
+      <bean id="userService" class="com.example.jdbcxml.UserServiceImpl">
+          <property name="userDao" ref="userDao"></property>
+      </bean>
+
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <tx:advice id="txAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="*"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <aop:config>
+        <aop:pointcut expression="execution( * com.example.jdbcxml.UserService.*(..))" id="pc"></aop:pointcut>
+        <aop:advisor pointcut-ref="pc" advice-ref="txAdvice"></aop:advisor>
+    </aop:config>
+</beans>
